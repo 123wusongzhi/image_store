@@ -1,0 +1,38 @@
+name: Reconstruct binary transfer test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.transfer-test/cat_test.b64'
+      - '.github/workflows/reconstruct-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decode and verify
+        run: |
+          mkdir -p transfer_test
+          base64 -d .transfer-test/cat_test.b64 > transfer_test/cat_test.webp
+          echo '81bc0990f8dc57f090b07ab7cd33921e0ce7d5502c9e045db73d94b71dc6ed9d  transfer_test/cat_test.webp' | sha256sum -c -
+          file transfer_test/cat_test.webp
+          ls -lh transfer_test/cat_test.webp
+
+      - name: Commit reconstructed binary
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add transfer_test/cat_test.webp
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+          else
+            git commit -m 'Verify binary reconstruction via Base64 chunks'
+            git push
+          fi
